@@ -1,0 +1,241 @@
+
+==============================
+1. appsettings.json
+==============================
+{
+  "ApiKeys": {
+    "SomeApi": "YourApiKey"
+  }
+}
+
+==============================
+2. App.axaml.cs
+==============================
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Markup.Xaml;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using System;
+
+namespace YourAppNamespace
+{
+    public partial class App : Application
+    {
+        public static IConfiguration Configuration { get; private set; }
+        public static ServiceProvider Services { get; private set; }
+
+        public override void Initialize()
+        {
+            AvaloniaXamlLoader.Load(this);
+
+            var builder = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+            Configuration = builder.Build();
+
+            var collection = new ServiceCollection();
+            ConfigureServices(collection);
+            Services = collection.BuildServiceProvider();
+        }
+
+        private void ConfigureServices(IServiceCollection services)
+        {
+            services.AddSingleton<NavigationService>();
+            services.AddTransient<RegistrationViewModel>();
+            services.AddTransient<AuthorizationViewModel>();
+            services.AddTransient<MainWindowViewModel>();
+        }
+
+        public override void OnFrameworkInitializationCompleted()
+        {
+            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                var navigation = Services.GetRequiredService<NavigationService>();
+                desktop.MainWindow = new MainWindow
+                {
+                    DataContext = new MainWindowViewModel(navigation)
+                };
+            }
+
+            base.OnFrameworkInitializationCompleted();
+        }
+    }
+}
+
+==============================
+3. NavigationService.cs
+==============================
+public class NavigationService
+{
+    private Window _mainWindow;
+
+    public NavigationService(Window mainWindow)
+    {
+        _mainWindow = mainWindow;
+    }
+
+    public void NavigateTo<T>(Action<T>? action = null) where T : class
+    {
+        var viewModel = App.Services.GetRequiredService<T>();
+        action?.Invoke(viewModel);
+        // Здесь логика отображения нужного View
+    }
+}
+
+==============================
+4. RegistrationViewModel.cs
+==============================
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+
+public partial class RegistrationViewModel : ObservableObject
+{
+    private readonly NavigationService _navigation;
+
+    [ObservableProperty]
+    private string login;
+
+    public RegistrationViewModel(NavigationService navigation)
+    {
+        _navigation = navigation;
+    }
+
+    [RelayCommand]
+    private void GoToAuthorization()
+    {
+        _navigation.NavigateTo<AuthorizationViewModel>(x => x.Login = Login);
+    }
+}
+
+==============================
+5. AuthorizationViewModel.cs
+==============================
+using CommunityToolkit.Mvvm.ComponentModel;
+
+public partial class AuthorizationViewModel : ObservableObject
+{
+    private readonly NavigationService _navigation;
+
+    [ObservableProperty]
+    private string login;
+
+    public AuthorizationViewModel(NavigationService navigation)
+    {
+        _navigation = navigation;
+    }
+}
+
+==============================
+6. MainWindowViewModel.cs
+==============================
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+
+public partial class MainWindowViewModel : ObservableObject
+{
+    private readonly NavigationService _navigation;
+
+    public MainWindowViewModel(NavigationService navigation)
+    {
+        _navigation = navigation;
+    }
+
+    [RelayCommand]
+    private void NavigateToRegistration()
+    {
+        _navigation.NavigateTo<RegistrationViewModel>();
+    }
+
+    [RelayCommand]
+    private void NavigateToAuthorization()
+    {
+        _navigation.NavigateTo<AuthorizationViewModel>();
+    }
+}
+
+==============================
+7. CelsiusToFarenhateConverter.cs
+==============================
+using Avalonia.Data.Converters;
+using System;
+using System.Globalization;
+
+public class CelsiusToFarenhateConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is double celsius)
+        {
+            return celsius * 9 / 5 + 32;
+        }
+        return null;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is double fahrenheit)
+        {
+            return (fahrenheit - 32) * 5 / 9;
+        }
+        return null;
+    }
+}
+
+==============================
+8. MainWindow.xaml.cs
+==============================
+using Avalonia.Controls;
+
+public partial class MainWindow : Window
+{
+    public MainWindow()
+    {
+        InitializeComponent();
+    }
+}
+
+==============================
+9. MainWindow.xaml
+==============================
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="YourAppNamespace.MainWindow"
+        Width="400" Height="200"
+        Title="Main Window">
+  <StackPanel Margin="20">
+    <Button Content="Go to Registration"
+            Command="{Binding NavigateToRegistrationCommand}" Margin="0,10"/>
+    <Button Content="Go to Authorization"
+            Command="{Binding NavigateToAuthorizationCommand}" Margin="0,10"/>
+  </StackPanel>
+</Window>
+
+==============================
+10. RegistrationView.xaml
+==============================
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:YourAppNamespace"
+             x:Class="YourAppNamespace.RegistrationView">
+    <UserControl.Resources>
+        <local:CelsiusToFarenhateConverter x:Key="CelsiusToFarenhate"/>
+    </UserControl.Resources>
+    <StackPanel Margin="20">
+        <TextBox Watermark="Login" Text="{Binding Login}"/>
+        <TextBlock Text="{Binding Celsius, Converter={StaticResource CelsiusToFarenhate}}" />
+        <Button Content="Go to Auth"
+                Command="{Binding GoToAuthorizationCommand}" Margin="0,10"/>
+    </StackPanel>
+</UserControl>
+
+==============================
+11. AuthorizationView.xaml
+==============================
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="YourAppNamespace.AuthorizationView">
+    <StackPanel Margin="20">
+        <TextBlock Text="Authorization Page"/>
+        <TextBlock Text="{Binding Login}" />
+    </StackPanel>
+</UserControl>
