@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="LabWork4.Views.UserListView">
+	<Grid RowDefinitions="Auto, *">
+		<StackPanel>
+			<StackPanel Orientation="Horizontal" Margin="5">
+				<TextBox Watermark="Логин" Width="100" Text="{Binding NewLogin}" Margin="5"/>
+				<TextBox Watermark="Пароль" Width="100" Text="{Binding NewPassword}" Margin="5"/>
+				<Button Content="Добавить" Command="{Binding AddUserCommand}" Margin="5" Padding="5,2"/>
+			</StackPanel>
+		</StackPanel>
+		
+		<DataGrid ItemsSource="{Binding Users, Mode=OneWay}"
+                  AutoGenerateColumns="False"
+                  HorizontalAlignment="Stretch"
+                  VerticalAlignment="Stretch"
+                  CanUserReorderColumns="True"
+                  CanUserResizeColumns="True"
+                  CanUserSortColumns="True"
+                  Grid.Row="1">
+			<DataGrid.Columns>
+				<DataGridTextColumn Header="Login" Binding="{Binding Login}" Width="*" />
+				<DataGridTextColumn Header="Password" Binding="{Binding Password}" Width="*" />
+				<DataGridTemplateColumn Header="Actions" Width="Auto">
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<Button Content="Delete"
+									Command="{Binding DataContext.DeleteUserCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+									CommandParameter="{Binding}" />
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+			</DataGrid.Columns>
+		</DataGrid>
+    </Grid>
+</UserControl>
